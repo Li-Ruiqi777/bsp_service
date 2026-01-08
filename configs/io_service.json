@@ -1,0 +1,6 @@
+{
+    "service_name": "io-service",
+    "zmq_port": 5555,
+    "daemon": false
+}
+
