@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-    std::string config_file = "configs/io_service.json";
+    std::string config_file = "/usr/etc/bsp-service/io_service.json";
 
     // 解析命令行参数
     if (argc > 1)

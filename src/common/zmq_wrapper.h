@@ -1,8 +1,9 @@
 #ifndef ZMQ_WRAPPER_H
 #define ZMQ_WRAPPER_H
 
+#include <memory>
 #include <string>
-#include <zmq.h>
+#include <zmq.hpp>
 
 namespace bsp_service
 {
@@ -17,9 +18,10 @@ enum class ZmqMode
 };
 
 /**
- * @brief ZeroMQ 通信封装类
+ * @brief ZeroMQ 通信封装类（基于 cppzmq）
  *
  * 提供统一的 ZeroMQ 消息收发接口，支持 REQ/REP 和 PUB/SUB 模式
+ * 使用现代 C++ 风格的 cppzmq 库
  */
 class ZmqComm
 {
@@ -78,12 +80,10 @@ public:
     }
 
 private:
-    void *context;    // ZeroMQ 上下文
-    void *socket;     // ZeroMQ socket
-    ZmqMode mode;     // 通信模式
-    bool initialized; // 是否已初始化
-
-    void cleanup();
+    std::unique_ptr<zmq::context_t> context;  // ZeroMQ 上下文
+    std::unique_ptr<zmq::socket_t> socket;    // ZeroMQ socket
+    ZmqMode mode;                             // 通信模式
+    bool initialized;                         // 是否已初始化
 };
 
 } // namespace bsp_service

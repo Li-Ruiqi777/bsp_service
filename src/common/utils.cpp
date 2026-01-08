@@ -12,7 +12,12 @@ std::string formatTimestamp(int64_t timestamp)
     std::tm *tm_info = std::localtime(&time);
 
     std::ostringstream oss;
-    oss << std::put_time(tm_info, "%Y-%m-%d %H:%M:%S");
+    oss << (tm_info->tm_year + 1900) << "-"
+        << std::setw(2) << std::setfill('0') << (tm_info->tm_mon + 1) << "-"
+        << std::setw(2) << std::setfill('0') << tm_info->tm_mday << " "
+        << std::setw(2) << std::setfill('0') << tm_info->tm_hour << ":"
+        << std::setw(2) << std::setfill('0') << tm_info->tm_min << ":"
+        << std::setw(2) << std::setfill('0') << tm_info->tm_sec;
     return oss.str();
 }
 
@@ -78,15 +83,5 @@ bool isValidJson(const std::string &json_str)
     return brace_count == 0 && bracket_count == 0;
 }
 
-std::string createResponseJson(int code, const std::string &msg, const std::string &data, int64_t seq)
-{
-    std::ostringstream oss;
-    oss << "{"
-        << "\"code\":" << code << ","
-        << "\"msg\":\"" << msg << "\","
-        << "\"data\":" << data << ","
-        << "\"seq\":" << seq << "}";
-    return oss.str();
-}
 
 } // namespace bsp_service

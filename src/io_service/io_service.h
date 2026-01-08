@@ -1,8 +1,8 @@
 #ifndef IO_SERVICE_H
 #define IO_SERVICE_H
 
-#include "../common/config.h"
-#include "../common/zmq_wrapper.h"
+#include "common/config.h"
+#include "common/zmq_wrapper.h"
 #include <atomic>
 #include <memory>
 #include <mutex>

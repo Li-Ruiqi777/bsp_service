@@ -45,18 +45,21 @@ target_link_libraries(io-service
     pthread
 )
 
-# 编译选项
-target_compile_options(io-service PRIVATE ${ZMQ_CFLAGS_OTHER})
-
 # 创建测试客户端（预留）
-# add_executable(test_io_client test/test_io_client.cpp)
-# target_include_directories(test_io_client PRIVATE
-#     ${CMAKE_SOURCE_DIR}
-#     ${CMAKE_SOURCE_DIR}/src
-#     ${ZMQ_INCLUDE_DIRS}
-#     ${CEREAL_INCLUDE_DIR}
-# )
-# target_link_libraries(test_io_client ${ZMQ_LIBRARIES} pthread)
+add_executable(test_io_client
+    test/test_io_client.cpp
+    ${COMMON_SOURCES}
+)
+
+target_include_directories(test_io_client PRIVATE
+    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_SOURCE_DIR}/src
+)
+target_link_libraries(test_io_client PRIVATE
+    cppzmq 
+    pthread
+    cereal::cereal
+)
 
 # 安装规则
 # DESTINATION为 CMAKE_INSTALL_PREFIX
@@ -64,6 +67,11 @@ set(CMAKE_INSTALL_PREFIX /home/lrq/linux/nfs/qtrootfs/usr)
 
 install(FILES configs/io_service.json
     DESTINATION etc/bsp-service
+)
+
+install(TARGETS io-service test_io_client
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
 )
 
 

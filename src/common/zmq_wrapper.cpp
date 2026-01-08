@@ -1,5 +1,5 @@
 #include "zmq_wrapper.h"
-#include <cstring>
+#include <iostream>
 #include <stdexcept>
 
 namespace bsp_service
@@ -15,10 +15,9 @@ ZmqComm::~ZmqComm()
 }
 
 ZmqComm::ZmqComm(ZmqComm &&other) noexcept
-    : context(other.context), socket(other.socket), mode(other.mode), initialized(other.initialized)
+    : context(std::move(other.context)), socket(std::move(other.socket)), mode(other.mode),
+      initialized(other.initialized)
 {
-    other.context = nullptr;
-    other.socket = nullptr;
     other.initialized = false;
 }
 
@@ -27,12 +26,10 @@ ZmqComm &ZmqComm::operator=(ZmqComm &&other) noexcept
     if (this != &other)
     {
         close();
-        context = other.context;
-        socket = other.socket;
+        context = std::move(other.context);
+        socket = std::move(other.socket);
         mode = other.mode;
         initialized = other.initialized;
-        other.context = nullptr;
-        other.socket = nullptr;
         other.initialized = false;
     }
     return *this;
@@ -40,123 +37,142 @@ ZmqComm &ZmqComm::operator=(ZmqComm &&other) noexcept
 
 bool ZmqComm::init(ZmqMode mode, const std::string &addr)
 {
-    if (initialized)
+    try
     {
+        // 如果已初始化，先关闭
+        if (initialized)
+        {
+            close();
+        }
+
+        this->mode = mode;
+
+        // 创建上下文（1 个 I/O 线程）
+        context = std::make_unique<zmq::context_t>(1);
+
+        // 根据模式创建 socket
+        int zmq_type = 0;
+        switch (mode)
+        {
+        case ZmqMode::REQ:
+            zmq_type = ZMQ_REQ;
+            break;
+        case ZmqMode::REP:
+            zmq_type = ZMQ_REP;
+            break;
+        case ZmqMode::PUB:
+            zmq_type = ZMQ_PUB;
+            break;
+        case ZmqMode::SUB:
+            zmq_type = ZMQ_SUB;
+            break;
+        }
+
+        socket = std::make_unique<zmq::socket_t>(*context, zmq_type);
+
+        // 根据模式进行绑定或连接
+        if (mode == ZmqMode::REP || mode == ZmqMode::PUB)
+        {
+            // 服务端：绑定地址
+            socket->bind(addr);
+        }
+        else
+        {
+            // 客户端：连接地址
+            socket->connect(addr);
+        }
+
+        initialized = true;
+        return true;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "ZmqComm init failed: " << e.what() << std::endl;
         close();
-    }
-
-    this->mode = mode;
-    context = zmq_ctx_new();
-    if (!context)
-    {
         return false;
     }
-
-    int zmq_type = 0;
-    switch (mode)
-    {
-    case ZmqMode::REQ:
-        zmq_type = ZMQ_REQ;
-        break;
-    case ZmqMode::REP:
-        zmq_type = ZMQ_REP;
-        break;
-    case ZmqMode::PUB:
-        zmq_type = ZMQ_PUB;
-        break;
-    case ZmqMode::SUB:
-        zmq_type = ZMQ_SUB;
-        break;
-    }
-
-    socket = zmq_socket(context, zmq_type);
-    if (!socket)
-    {
-        zmq_ctx_destroy(context);
-        context = nullptr;
-        return false;
-    }
-
-    int ret = 0;
-    if (mode == ZmqMode::REP || mode == ZmqMode::PUB)
-    {
-        // 服务端：绑定地址
-        ret = zmq_bind(socket, addr.c_str());
-    }
-    else
-    {
-        // 客户端：连接地址
-        ret = zmq_connect(socket, addr.c_str());
-    }
-
-    if (ret != 0)
-    {
-        zmq_close(socket);
-        zmq_ctx_destroy(context);
-        socket = nullptr;
-        context = nullptr;
-        return false;
-    }
-
-    initialized = true;
-    return true;
 }
 
 int ZmqComm::sendMsg(const std::string &msg)
 {
-    if (!initialized || !socket)
+    try
     {
+        if (!initialized || !socket)
+        {
+            return -1;
+        }
+
+        zmq::message_t message(msg.begin(), msg.end());
+        socket->send(message, zmq::send_flags::none);
+        return 0;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "ZmqComm sendMsg failed: " << e.what() << std::endl;
         return -1;
     }
-
-    int ret = zmq_send(socket, msg.c_str(), msg.length(), 0);
-    return (ret >= 0) ? 0 : -1;
 }
 
 int ZmqComm::recvMsg(std::string &msg)
 {
-    if (!initialized || !socket)
+    try
     {
+        if (!initialized || !socket)
+        {
+            return -1;
+        }
+
+        zmq::message_t message;
+        auto result = socket->recv(message, zmq::recv_flags::none);
+
+        if (result)
+        {
+            msg = message.to_string();
+            return 0;
+        }
         return -1;
     }
-
-    char buffer[4096] = {0};
-    int ret = zmq_recv(socket, buffer, sizeof(buffer) - 1, 0);
-    if (ret >= 0)
+    catch (const std::exception &e)
     {
-        buffer[ret] = '\0';
-        msg = std::string(buffer);
-        return 0;
+        std::cerr << "ZmqComm recvMsg failed: " << e.what() << std::endl;
+        return -1;
     }
-    return -1;
 }
 
 void ZmqComm::subscribe(const std::string &topic)
 {
-    if (mode == ZmqMode::SUB && socket)
+    try
     {
-        zmq_setsockopt(socket, ZMQ_SUBSCRIBE, topic.c_str(), topic.length());
+        if (mode == ZmqMode::SUB && socket)
+        {
+            socket->set(zmq::sockopt::subscribe, topic);
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "ZmqComm subscribe failed: " << e.what() << std::endl;
     }
 }
 
 void ZmqComm::close()
 {
-    if (socket)
+    try
     {
-        zmq_close(socket);
-        socket = nullptr;
+        if (socket)
+        {
+            socket->close();
+            socket.reset();
+        }
+        if (context)
+        {
+            context.reset();
+        }
+        initialized = false;
     }
-    if (context)
+    catch (const std::exception &e)
     {
-        zmq_ctx_destroy(context);
-        context = nullptr;
+        std::cerr << "ZmqComm close failed: " << e.what() << std::endl;
     }
-    initialized = false;
-}
-
-void ZmqComm::cleanup()
-{
-    close();
 }
 
 } // namespace bsp_service

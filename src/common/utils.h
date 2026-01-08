@@ -38,16 +38,6 @@ std::string errorCodeToString(int code);
  */
 bool isValidJson(const std::string &json_str);
 
-/**
- * @brief 创建响应消息 JSON
- * @param code 响应码（0 成功，非 0 错误）
- * @param msg 响应消息
- * @param data 响应数据（JSON 字符串）
- * @param seq 消息序列号
- * @return JSON 格式的响应字符串
- */
-std::string createResponseJson(int code, const std::string &msg, const std::string &data = "{}",
-                               int64_t seq = 0);
 
 } // namespace bsp_service
 

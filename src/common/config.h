@@ -1,12 +1,37 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <cereal/archives/json.hpp>
+#include <cereal/types/string.hpp>
 #include <cstdint>
-#include <map>
 #include <string>
 
 namespace bsp_service
 {
+
+/**
+ * @brief 配置数据结构体
+ * 
+ * 使用 cereal 进行 JSON 序列化/反序列化
+ */
+struct ConfigData
+{
+    std::string serviceName = "io-service";
+    int zmqPort = 5555;
+    int zmqPortRep = 5556;
+    int zmqPortPub = 5557;
+    bool daemon = false;
+
+    template <class Archive>
+    void serialize(Archive &archive)
+    {
+        archive(cereal::make_nvp("service_name", serviceName),
+                cereal::make_nvp("zmq_port", zmqPort),
+                cereal::make_nvp("zmq_port_rep", zmqPortRep),
+                cereal::make_nvp("zmq_port_pub", zmqPortPub),
+                cereal::make_nvp("daemon", daemon));
+    }
+};
 
 /**
  * @brief 配置解析类
@@ -66,7 +91,7 @@ public:
     bool hasKey(const std::string &key) const;
 
 private:
-    std::map<std::string, std::string> configMap;
+    ConfigData configData;
     bool parseJsonFile(const std::string &config_file);
 };
 

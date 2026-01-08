@@ -34,6 +34,7 @@ bool IoService::init(const std::string &config_file)
     // 加载配置文件
     if (!config.loadFromFile(config_file))
     {
+        std::cerr << "Failed to load file" << std::endl;
         return false;
     }
 
@@ -46,6 +47,7 @@ bool IoService::init(const std::string &config_file)
     std::string addr = "tcp://*:" + std::to_string(zmqPort);
     if (!zmqComm->init(ZmqMode::REP, addr))
     {
+        std::cerr << "Failed to initialize zmq" << std::endl;
         return false;
     }
 
@@ -53,6 +55,7 @@ bool IoService::init(const std::string &config_file)
     ioHandler = std::make_unique<IoHandler>();
     if (!ioHandler->init(&config))
     {
+        std::cerr << "Failed to ioHandler" << std::endl;
         return false;
     }
 
