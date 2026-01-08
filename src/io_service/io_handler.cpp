@@ -1,5 +1,6 @@
 #include "io_handler.h"
 #include "bsp.h"
+#include <bsp/common/bsp_common.h>
 #include <sstream>
 
 namespace bsp_service
